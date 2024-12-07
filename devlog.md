@@ -1,6 +1,6 @@
 # Development Log
 
-## November 24, 2024 - Initial Project Setup and Requirements Analysis
+## November 24, 2024 12 PM - Initial Project Setup and Requirements Analysis
 
 ### Thoughts So Far
 Today I'm starting to understand the requirements for the B-tree index file project. Here's what I've learned:
@@ -73,4 +73,76 @@ Required Commands:
 - Research Python's struct module for handling binary data
 - Look up examples of B-tree implementations for reference
 - Plan out the class structure in more detail
+
+## December 7, 2024 10 AM- Initial Project Setup and Requirements Analysis
+
+### Thoughts Since Last Session
+After reviewing the previous analysis, I've had more thoughts about the implementation:
+
+- The 3-node memory limit will require careful planning for tree traversal
+- Need to ensure proper byte ordering for file compatibility
+- Should implement a block cache system to track which nodes are in memory
+
+### Changes/Development Since Last Session
+
+- Reviewed project requirements in detail
+- Better understanding of the memory constraints and their implications
+- Identified that Python would be good choice for implementation due to:
+
+- Built-in struct module for binary data handling
+- Easy file I/O with byte operations
+- Simple implementation of big-endian conversions with .to_bytes()
+
+### Plan for Today's Session
+
+Create basic program structure:
+
+class BlockManager:
+    # Handle reading/writing blocks
+    # Manage 3-node memory limit
+    pass
+
+class BTreeNode:
+    # Node operations
+    # Key/value storage
+    # Child pointer management
+    pass
+
+class IndexFile:
+    # File operations
+    # Header management
+    pass
+
+def main():
+    # Command loop
+    # User interface
+    pass
+
+Begin implementing core functionality:
+
+- Set up the command loop structure
+- Implement basic file operations (create/open)
+- Create functions for reading/writing blocks
+
+Begin implementing core functionality:
+
+- Set up the command loop structure
+- Implement basic file operations (create/open)
+- Create functions for reading/writing blocks
+
+### Questions to Resolve
+
+Block Management:
+
+- How to handle block allocation efficiently?
+- Best way to track free/used blocks?
+- Strategy for node splitting when full?
+
+Error Handling:
+
+- How to handle file corruption?
+- What to do if magic number check fails?
+- How to recover from failed operations?
+
+
 
