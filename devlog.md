@@ -144,5 +144,8 @@ Error Handling:
 - What to do if magic number check fails?
 - How to recover from failed operations?
 
+## December 7, 2024 5 PM- Initial Project Setup and Requirements Analysis
 
+I am going to change from python to C.
 
+I would like to gain a better understanding of all that is happening at a lower level and feel more comfortable with C.
