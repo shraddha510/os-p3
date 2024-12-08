@@ -129,7 +129,7 @@ static int split_child(BTree *tree, BTreeNode *parent, int child_index)
     {
         for (int i = 0; i <= MAX_KEYS / 2; i++)
         {
-            new_node.[i] = child.children[i + MAX_KEYS / 2 + 1];
+            new_node.children[i] = child.children[i + MAX_KEYS / 2 + 1];
             child.children[i + MAX_KEYS / 2 + 1] = 0;
         }
     }
