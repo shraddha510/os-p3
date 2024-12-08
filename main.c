@@ -69,6 +69,68 @@ static void createTree()
     }
 }
 
+// Function to handle opening an existing B-Tree file
+static void openTree()
+{
+    char filename[256];
+    printf("Enter filename to open: ");
+    if (fgets(filename, sizeof(filename), stdin))
+    {
+        filename[strcspn(filename, "\n")] = 0;
+
+        if (currentTree.is_open)
+        {
+            close_btree(&currentTree);
+        }
+
+        if (open_btree(&currentTree, filename) == 0)
+        {
+            printf("B-Tree file opened successfully.\n");
+        }
+        else
+        {
+            printf("Error opening file. Check if file exists and is valid.\n");
+        }
+    }
+}
+
+// Function to handle inserting a key-value pair
+static void insertPair()
+{
+    if (!currentTree.is_open)
+    {
+        printf("Error: No index file is currently open.\n");
+        return;
+    }
+
+    uint64_t key, value;
+    printf("Enter key (unsigned integer): ");
+    if (scanf("%llu", &key) != 1)
+    {
+        printf("Invalid key format.\n");
+        clearInputBuffer();
+        return;
+    }
+
+    printf("Enter value (unsigned integer): ");
+    if (scanf("%llu", &value) != 1)
+    {
+        printf("Invalid value format.\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    if (insert_key(&currentTree, key, value) == 0)
+    {
+        printf("Key-value pair inserted successfully.\n");
+    }
+    else
+    {
+        printf("Error: Key already exists or insertion failed.\n");
+    }
+}
+
 int main()
 {
     char choice[10];
