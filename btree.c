@@ -22,6 +22,63 @@ static uint64_t from_big_endian(uint64_t value)
 #endif
 }
 
+// Block I/O operations
+static int write_block(FILE *fp, uint64_t block_id, const void *buf)
+{
+    if (fseek(fp, block_id * BLOCK_SIZE, SEEK_SET) != 0)
+    {
+        return -1;
+    }
+    if (fwrite(buf, 1, BLOCK_SIZE, fp) != BLOCK_SIZE)
+    {
+        return -1;
+    }
+    fflush(fp);
+    return 0;
+}
+
+static int read_block(FILE *fp, uint64_t block_id, void *buf)
+{
+    if (fseek(fp, block_id * BLOCK_SIZE, SEEK_SET) != 0)
+    {
+        return -1;
+    }
+    if (fread(buf, 1, BLOCK_SIZE, fp) != BLOCK_SIZE)
+    {
+        return -1;
+    }
+    return 0;
+}
+
+// Header I/O operations
+static int write_header(BTree *tree)
+{
+    unsigned char block[BLOCK_SIZE] = {0};
+    memcpy(block, tree->header.magic, 8);
+
+    uint64_t *fields = (uint64_t *)(block + 8);
+    fields[0] = to_big_endian(tree->header.root_block_id);
+    fields[1] = to_big_endian(tree->header.next_block_id);
+
+    return write_block(tree->fp, 0, block);
+}
+
+static int read_header(BTree *tree)
+{
+    unsigned char block[BLOCK_SIZE];
+    if (read_block(tree->fp, 0, block) != 0)
+    {
+        return -1;
+    }
+
+    memcpy(tree->header.magic, block, 8);
+    uint64_t *fields = (uint64_t *)(block + 8);
+    tree->header.root_block_id = from_big_endian(fields[1]);
+    tree->header.next_block_id = from_big_endian(fields[1]);
+
+    return 0;
+}
+
 int create_btree(BTree *tree, const char *filename)
 {
     FILE *fp = fopen(filename, "wb+");
