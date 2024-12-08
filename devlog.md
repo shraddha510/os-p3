@@ -163,3 +163,43 @@ I am having trouble getting started with btree.c but I will just start with the 
 - Header file
   - Write up all the expectations detailed in the Project Description
 - Create a btree.c file where I start implementing all the specified functions.
+
+## December 7, 2024 8 PM 
+
+### Thoughts so far
+
+I have been reading about B-Trees and the endian stuff so I'm gaining a clearer picture on how to move forward.
+
+I'm going to start by adding the menu.
+
+### Plan for this session
+
+Create function (here are my thoughts so far)-
+
+Algorithm: createTree
+- Open file in write/binary mode ("wb+")
+- If file open fails:
+   - Return error
+
+- Initialize tree structure:
+   - Set file pointer
+   - Set is_open flag
+   - Copy magic number
+   - Set root_block_id to 0 (empty tree)
+   - Set next_block_id to 1
+
+- Write header block:
+   - Create 512-byte buffer
+   - Write magic number (first 8 bytes)
+   - Convert root_block_id to big-endian
+   - Convert next_block_id to big-endian
+   - Write to block 0
+   - If write fails:
+      - Close file
+      - Return error
+
+- Initialize node cache:
+   - Clear cache entries
+   - Set count to 0
+
+- Return success
