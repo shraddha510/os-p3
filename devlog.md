@@ -241,20 +241,8 @@ i have learned the importance of binary mode for cross-platform compatibility
 I will be implementing the create and open functions in main and testing if these work. Maybe also close or insert.
 ### Plan for this session
 
-I'm going to start creating a BTree struct in my header file. It will contain:
-- File access
-- Header information
-- Status tracking
-
-Following that, I will create a simple outline of creating, opening and closing a btree in my btree.c file.
-
-I am going to include the endianness functions from the Project Description as well.
+will add tomorrow 
 
 ### Challenges
 
-Confused about different file modes ("w+", "wb+", "r+", "rb+")
-
-Solutions:
-Changed to "wb+" for create_btree
-Used "rb+" for open_btree
-i have learned the importance of binary mode for cross-platform compatibility
+will add tomorrow
