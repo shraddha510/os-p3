@@ -204,6 +204,10 @@ Algorithm: createTree
 
 - Return success
 
+### Challenges
+
+I am struggling with implementing the B-Trees. Splitting and Parent-Child relationship is confusing to me.
+
 ## December 7, 2024 11 PM 
 
 ### Thoughts so far
@@ -211,3 +215,21 @@ Algorithm: createTree
 I have gotten a clearer understanding. 
 
 ### Plan for this session
+
+I'm going to start creating a BTree struct in my header file. It will contain:
+- File access
+- Header information
+- Status tracking
+
+Following that, I will create a simple outline of creating, opening and closing a btree in my btree.c file.
+
+I am going to include the endianness functions from the Project Description as well.
+
+### Challenges
+
+Confused about different file modes ("w+", "wb+", "r+", "rb+")
+
+Solutions:
+Changed to "wb+" for create_btree
+Used "rb+" for open_btree
+i have learned the importance of binary mode for cross-platform compatibility

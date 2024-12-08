@@ -63,4 +63,19 @@ typedef struct
     uint64_t next_block_id; // Next available block ID for allocation
 } BTreeHeader;
 
+/**
+ * B-Tree Handle Structure
+ * ----------------------
+ * Maintains the state of an open B-Tree including:
+ * - File access
+ * - Header information
+ * - Status tracking
+ */
+typedef struct
+{
+    FILE *fp;           // File handle for persistent storage
+    BTreeHeader header; // Cached copy of the file header
+    int is_open;        // Flag indicating if the B-Tree is currently open
+} BTree;
+
 #endif /* BTREE_H */
