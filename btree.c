@@ -73,7 +73,7 @@ static int read_header(BTree *tree)
 
     memcpy(tree->header.magic, block, 8);
     uint64_t *fields = (uint64_t *)(block + 8);
-    tree->header.root_block_id = from_big_endian(fields[1]);
+    tree->header.root_block_id = from_big_endian(fields[0]);
     tree->header.next_block_id = from_big_endian(fields[1]);
 
     return 0;
