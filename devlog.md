@@ -239,10 +239,103 @@ i have learned the importance of binary mode for cross-platform compatibility
 ### Thoughts so far
 
 I will be implementing the create and open functions in main and testing if these work. Maybe also close or insert.
+
 ### Plan for this session
 
-will add tomorrow 
+1. Write a 512-byte block to a specific location in file
+
+Algorithm:
+Calculate file position (block_id * BLOCK_SIZE)
+Seek to position
+Write entire block (512 bytes)
+Flush to ensure data is written
+Return success/failure
+
+Error Handling:
+- Check seek operation success
+- Verify complete write
+- Ensure data is flushed to disk
+
+2. Read a 512-byte block from a specific location in file
+
+Algorithm:
+Calculate file position (block_id * BLOCK_SIZE)
+Seek to position
+Read entire block (512 bytes)
+Return success/failure
+
+Error Handling:
+- Check seek operation success
+- Verify complete read
+
+3. Header
+
+-> Write B-tree header information to first block
+
+Algorithm:
+Create zeroed 512-byte buffer
+Write magic number (first 8 bytes)
+Convert root_block_id to big-endian
+Convert next_block_id to big-endian
+Write to block 0
+Return success/failure
+
+Layout:
+- Bytes 0-7:   Magic Number
+- Bytes 8-15:  Root Block ID
+- Bytes 16-23: Next Block ID
+
+-> Read and valdate B-tree header from first block
+
+Algorithm:
+Read block 0
+Extract magic number
+Convert root_block_id from big-endian
+Convert next_block_id from big-endian
+Return success/failure
+
+Error Handling:
+- Check for read success
+- Validate magic number
 
 ### Challenges
 
 will add tomorrow
+
+## December 8, 2024 12 PM
+
+### Thoughts so far
+
+I coded a lot last night and I will summarize the design process and challenges which I had laid out on paper in my notebook:
+
+Create:
+   - Test creating new file
+   - Verify header contents
+   - Check error conditions
+
+Open:
+   - Test opening valid file
+   - Test invalid file
+   - Test non-existent file
+
+Close:
+   - Test normal close
+   - Test double close
+   - Test NULL pointer
+
+I have been testing with basic creation/close and insertion of a file. Currently everything prints out correctly.
+The magic number appears and then does inserted elements.
+
+I updated the main function to contain all functionalities of the program thusfar.
+
+
+### Plan for this session
+
+I will implement the rest of the requirements in the project description such as extract, load, search, etc.
+
+I am creating the functions within btree.c that will create a new node, and check if a node is a leaf.
+
+### Challenges
+
+I am having trouble with the split node function because there is a lot of shifting between the keys and children. 
+I am going to lay out the design for split node function.

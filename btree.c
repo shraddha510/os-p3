@@ -1,7 +1,14 @@
+// btree.c
 #include "btree.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+static int write_block(FILE *fp, uint64_t block_id, const void *buf);
+static int read_block(FILE *fp, uint64_t block_id, void *buf);
+static int write_header(BTree *tree);
+static int read_header(BTree *tree);
+static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t value);
 
 // Endianness conversion functions
 static uint64_t to_big_endian(uint64_t value)
@@ -77,6 +84,45 @@ static int read_header(BTree *tree)
     tree->header.next_block_id = from_big_endian(fields[1]);
 
     return 0;
+}
+
+// Helper function to check if node is a leaf
+static int is_leaf(BTreeNode *node)
+{
+    return node->children[0] == 0;
+}
+
+// Create a new node
+static BTreeNode *create_node(BTree *tree)
+{
+    BTreeNode *node = (BTreeNode *)calloc(1, sizeof(BTreeNode));
+    if (!node)
+        return NULL;
+
+    node->block_id = tree->header.next_block_id++;
+    write_header(tree);
+
+    return node;
+}
+
+// Split child node when full
+static int split_child(BTree *tree, BTreeNode *parent, int child_index)
+{
+    BTreeNode child = {0}, new_node = {0};
+    read_node(tree, parent->children[child_index], &child);
+
+    new_node.block_id = tree->header.next_block_id++;
+    new_node.parent_block_id = parent->block_id;
+    new_node.num_keys = MAX_KEYS / 2;
+
+    // Copy second half of child's keys and values to new node
+    for (int i = 0; i < MAX_KEYS / 2; i++)
+    {
+        new_node.keys[i] = child.keys[i + MAX_KEYS / 2];
+        new_node.values[i] = child.values[i + MAX_KEYS / 2];
+        child.keys[i + MAX_KEYS / 2] = 0;
+        child.values[i + MAX_KEYS / 2] = 0;
+    }
 }
 
 // Insert into a non-full node

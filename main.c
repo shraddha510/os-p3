@@ -1,3 +1,4 @@
+// main.c
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -5,6 +6,13 @@
 #include "btree.h"
 
 static BTree currentTree; // The currently open B-Tree
+
+static void clearInputBuffer()
+{
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}
 
 static void printMenu()
 {
@@ -156,9 +164,40 @@ int main()
             {
                 printMenu();
             }
-            if (strcmp(choice, "1") == 0 || strcmp(choice, "create") == 0)
+            else if (strcmp(choice, "1") == 0 || strcmp(choice, "create") == 0)
             {
-                // put function here
+                createTree();
+            }
+            else if (strcmp(choice, "2") == 0 || strcmp(choice, "open") == 0)
+            {
+                openTree();
+            }
+            else if (strcmp(choice, "3") == 0 || strcmp(choice, "insert") == 0)
+            {
+                insertPair();
+            }
+            else if (strcmp(choice, "4") == 0 || strcmp(choice, "search") == 0)
+            {
+                searchForKey();
+            }
+            else if (strcmp(choice, "5") == 0 || strcmp(choice, "load") == 0)
+            {
+                loadFromFile();
+            }
+            else if (strcmp(choice, "6") == 0 || strcmp(choice, "print") == 0)
+            {
+                if (!currentTree.is_open)
+                {
+                    printf("Error: No index file is currently open.\n");
+                }
+                else
+                {
+                    print_tree(&currentTree);
+                }
+            }
+            else if (strcmp(choice, "7") == 0 || strcmp(choice, "extract") == 0)
+            {
+                extractToFile();
             }
             else if (strcmp(choice, "8") == 0 || strcmp(choice, "quit") == 0)
             {
@@ -169,6 +208,11 @@ int main()
                 printf("Unknown command. Type 'menu' to see available commands.\n");
             }
         }
+    }
+
+    if (currentTree.is_open)
+    {
+        close_btree(&currentTree);
     }
     printf("Goodbye!\n");
     return 0;

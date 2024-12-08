@@ -1,3 +1,4 @@
+// btree.h
 #ifndef BTREE_H
 #define BTREE_H
 
@@ -77,5 +78,14 @@ typedef struct
     BTreeHeader header; // Cached copy of the file header
     int is_open;        // Flag indicating if the B-Tree is currently open
 } BTree;
+
+/**
+ * Function Prototypes
+ * ------------------
+ */
+int create_btree(BTree *tree, const char *filename);
+int open_btree(BTree *tree, const char *filename);
+void close_btree(BTree *tree);
+int insert_key(BTree *tree, uint64_t key, uint64_t value);
 
 #endif /* BTREE_H */
