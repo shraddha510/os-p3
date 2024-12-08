@@ -123,6 +123,18 @@ static int split_child(BTree *tree, BTreeNode *parent, int child_index)
         child.keys[i + MAX_KEYS / 2] = 0;
         child.values[i + MAX_KEYS / 2] = 0;
     }
+
+    // If not leaf, copy relevant children
+    if (!is_leaf(&child))
+    {
+        for (int i = 0; i <= MAX_KEYS / 2; i++)
+        {
+            new_node[i] = child[i + MAX_KEYS / 2];
+            child[i + MAX_KEYS / 2 + 1] = 0;
+        }
+    }
+
+    child.num_keys = MAX_KEYS / 2;
 }
 
 // Insert into a non-full node
