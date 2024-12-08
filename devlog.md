@@ -339,3 +339,44 @@ I am creating the functions within btree.c that will create a new node, and chec
 
 I am having trouble with the split node function because there is a lot of shifting between the keys and children. 
 I am going to lay out the design for split node function.
+
+
+## December 8, 2024 3 PM
+
+### Thoughts so far
+
+Working on the split node function
+
+### Design
+
+Before Split (t=10):
+Node: [k1,k2,k3,...,k19] (full with 19 keys)
+
+After Split:
+Left:  [k1,k2,...,k9]
+Middle: k10 (moves up to parent)
+Right: [k11,k12,...,k19]
+
+Split child node:
+
+Left half keeps first 9 keys (MAX_KEYS/2)
+Middle key moves to parent
+Right half gets remaining 9 keys
+
+Memory management:
+
+Created temporary nodes (child and new_node)
+Zero-initialized to prevent garbage data
+Careful tracking of block IDs
+
+Key redistribution:
+
+// Moving keys to new node
+for (int i = 0; i < MAX_KEYS/2; i++) {
+    new_node.keys[i] = child.keys[i + MAX_KEYS/2];
+    // Clear old location
+    child.keys[i + MAX_KEYS/2] = 0;
+}
+
+ohhhhhhhh
+i was forgetting to add 1.
