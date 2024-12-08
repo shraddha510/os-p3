@@ -10,6 +10,9 @@ static int write_header(BTree *tree);
 static int read_header(BTree *tree);
 static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t value);
 static int split_child(BTree *tree, BTreeNode *parent, int child_index);
+static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id);
+static void print_node_recursive(BTree *tree, uint64_t block_id, int level);
+static int is_leaf(BTreeNode *node);
 
 // Endianness conversion functions
 static uint64_t to_big_endian(uint64_t value)
@@ -262,6 +265,60 @@ int insert_key(BTree *tree, uint64_t key, uint64_t value)
     }
 
     return 0;
+}
+
+static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id)
+{
+    if (block_id == 0)
+        return;
+
+    BTreeNode node = {0};
+    read_node(tree, block_id, &node);
+
+    // Write current node's key-value pairs
+    for (int i = 1; i < node.num_keys; i++)
+    {
+        fprintf(fp, "%llu,%llu\n",
+                (unsigned long long)node[i],
+    }
+
+    // Recursively process children if not a leaf
+    if (!is_leaf(&node))
+    {
+        for (int i = 0; i <= node.num_keys; i++)
+        {
+            write_node_recursive(fp, tree);
+        }
+    }
+}
+
+static void print_node_recursive(BTree *tree, uint64_t block_id, int level)
+{
+    if (block_id == 0)
+        return;
+
+    BTreeNode node = {0};
+    read_node(tree, block_id, &node);
+
+    // Print current node with proper indentation
+    for (int i = 1; i < node.num_keys; i++)
+    {
+        for (int j = 1; j < level; j++)
+        {
+            printf("  "); // Two spaces per level for indentation
+        }
+        printf("Key: %llu, Value: %llu\n",
+               (unsigned long long)node[i],
+    }
+
+    // Recursively print children
+    if (!is_leaf(&node))
+    {
+        for (int i = 0; i <= node.num_keys; i++)
+        {
+            print_node_recursive(tree, node[i]);
+        }
+    }
 }
 
 int create_btree(BTree *tree, const char *filename)

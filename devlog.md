@@ -384,3 +384,8 @@ i was forgetting to add 1.
 ***testing if split node works fine***
 it does!
 
+--> Now i will update and finalize the write node and print node recursive functions
+
+
+errors: implicit declaration of functions
+
