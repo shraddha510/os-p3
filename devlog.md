@@ -156,6 +156,8 @@ I would like to gain a better understanding of all that is happening at a lower 
 
 I am going to start by creating the header file for the btree.c file
 
+I am having trouble getting started with btree.c but I will just start with the implementation of create?
+
 ### Plan for this session
 
 - Header file
