@@ -9,6 +9,7 @@ static int read_block(FILE *fp, uint64_t block_id, void *buf);
 static int write_header(BTree *tree);
 static int read_header(BTree *tree);
 static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t value);
+static int split_child(BTree *tree, BTreeNode *parent, int child_index);
 
 // Endianness conversion functions
 static uint64_t to_big_endian(uint64_t value)
@@ -133,6 +134,30 @@ static int split_child(BTree *tree, BTreeNode *parent, int child_index)
             child.children[i + MAX_KEYS / 2 + 1] = 0;
         }
     }
+
+    child.num_keys = MAX_KEYS / 2;
+
+    // Move parent's keys and children to make room
+    for (int i = parent->num_keys; i > child_index; i--)
+    {
+        parent->keys[i] = parent->keys[i - 1];
+        parent->values[i] = parent->values[i - 1];
+        parent->children[i + 1] = parent->children[i];
+    }
+
+    // Add middle key to parent
+    parent->keys[child_index] = child.keys[MAX_KEYS / 2];
+    parent->values[child_index] = child.values[MAX_KEYS / 2];
+    parent->children[child_index + 1] = new_node.block_id;
+    parent->num_keys++;
+
+    // Write all modified nodes
+    write_node(tree, parent);
+    write_node(tree, &child);
+    write_node(tree, &new_node);
+    write_header(tree);
+
+    return 0;
 }
 
 // Insert into a non-full node

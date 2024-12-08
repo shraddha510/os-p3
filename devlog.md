@@ -381,4 +381,6 @@ for (int i = 0; i < MAX_KEYS/2; i++) {
 ohhhhhhhh
 i was forgetting to add 1.
 
+***testing if split node works fine***
+it does!
 

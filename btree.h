@@ -87,5 +87,9 @@ int create_btree(BTree *tree, const char *filename);
 int open_btree(BTree *tree, const char *filename);
 void close_btree(BTree *tree);
 int insert_key(BTree *tree, uint64_t key, uint64_t value);
+int search_key(BTree *tree, uint64_t key, uint64_t *value);
+int load_data(BTree *tree, const char *filename);
+int extract_data(BTree *tree, const char *filename);
+void print_tree(BTree *tree);
 
 #endif /* BTREE_H */
