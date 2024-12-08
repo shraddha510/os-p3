@@ -30,4 +30,22 @@
  */
 #define MAGIC_NUMBER "4337PRJ3"
 
+/**
+ * B-Tree Node Structure
+ * --------------------
+ * In-memory representation of a B-Tree node containing:
+ * - Metadata (block ID, parent reference)
+ * - Keys and associated values
+ * - Child pointers
+ */
+typedef struct
+{
+    uint64_t block_id;               // Unique identifier for this node's disk block
+    uint64_t parent_block_id;        // Block ID of this node's parent (0 if root)
+    uint64_t num_keys;               // Current number of keys stored in this node
+    uint64_t keys[MAX_KEYS];         // Array of keys in ascending order
+    uint64_t values[MAX_KEYS];       // Array of values corresponding to keys
+    uint64_t children[MAX_CHILDREN]; // Block IDs of child nodes
+} BTreeNode;
+
 #endif /* BTREE_H */
