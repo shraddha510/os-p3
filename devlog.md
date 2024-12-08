@@ -389,3 +389,102 @@ it does!
 
 errors: implicit declaration of functions
 
+Function: write_node_recursive
+Export B-tree nodes to a file in a format suitable for later import
+
+Algorithm:
+Base Case Check:
+   IF block_id = 0 THEN
+       RETURN  // Empty subtree
+   
+Node Processing:
+   node = read_node(block_id)  // Load node from disk
+   
+Data Writing:
+   FOR each key i in node.keys (0 to num_keys-1):
+       WRITE node.keys[i], node.values[i] to file
+       ADD newline
+   
+Child Traversal:
+   IF node is not leaf THEN
+       FOR each child i (0 to num_keys):
+           write_node_recursive(file, tree, node.children[i])
+
+Function: print_node_recursive
+Display B-tree structure with visual hierarchy
+
+Algorithm:
+Base Case Check:
+   IF block_id = 0 THEN
+       RETURN  // Empty subtree
+   
+Node Processing:
+   node = read_node(block_id)  // Load node from disk
+   
+Data Display:
+   FOR each key i in node.keys (0 to num_keys-1):
+       PRINT level * 2 spaces (indentation)
+       PRINT key[i] and value[i]
+   
+Child Traversal:
+   IF node is not leaf THEN
+       FOR each child i (0 to num_keys):
+           print_node_recursive(tree, node.children[i], level + 1)
+
+
+         [10]
+        /    \
+    [5,8]    [15,20]
+    
+Start at root (10)
+   - Write: "10,value"
+   - Process left child
+Process [5,8]
+   - Write: "5,value"
+   - Write: "8,value"
+Process [15,20]
+   - Write: "15,value"
+   - Write: "20,value"
+
+Output file:
+10,value1
+5,value2
+8,value3
+15,value4
+20,value5
+
+print_node_recursive traversal:
+
+1. Start at root (10)
+   Level 0: "Key: 10, Value: value1"
+   
+2. Process [5,8]
+   Level 1: "  Key: 5, Value: value2"
+   Level 1: "  Key: 8, Value: value3"
+   
+3. Process [15,20]
+   Level 1: "  Key: 15, Value: value4"
+   Level 1: "  Key: 20, Value: value5"
+
+Console output:
+  Key: 10, Value: value1
+  Key: 5, Value: value2
+  Key: 8, Value: value3
+  Key: 15, Value: value4
+  Key: 20, Value: value5
+
+Function: validate_node(tree, block_id, min_key, max_key)
+Verify B-tree properties are maintained
+
+Algorithm:
+Base Case:
+   IF block_id = 0 THEN
+       min_key = 0
+       max_key = 0
+       RETURN true
+
+Property Checks:
+   - Key ordering
+   - Node filling
+   - Child relationships
+   - Parent pointers

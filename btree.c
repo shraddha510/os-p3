@@ -276,10 +276,11 @@ static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id)
     read_node(tree, block_id, &node);
 
     // Write current node's key-value pairs
-    for (int i = 1; i < node.num_keys; i++)
+    for (int i = 0; i < node.num_keys; i++)
     {
         fprintf(fp, "%llu,%llu\n",
-                (unsigned long long)node[i],
+                (unsigned long long)node.keys[i],
+                (unsigned long long)node.values[i]);
     }
 
     // Recursively process children if not a leaf
@@ -287,7 +288,7 @@ static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id)
     {
         for (int i = 0; i <= node.num_keys; i++)
         {
-            write_node_recursive(fp, tree, node.block_id);
+            write_node_recursive(fp, tree, node.children[i]);
         }
     }
 }
@@ -301,14 +302,15 @@ static void print_node_recursive(BTree *tree, uint64_t block_id, int level)
     read_node(tree, block_id, &node);
 
     // Print current node with proper indentation
-    for (int i = 1; i < node.num_keys; i++)
+    for (int i = 0; i < node.num_keys; i++)
     {
-        for (int j = 1; j < level; j++)
+        for (int j = 0; j < level; j++)
         {
             printf("  "); // Two spaces per level for indentation
         }
         printf("Key: %llu, Value: %llu\n",
-               (unsigned long long)node[i],
+               (unsigned long long)node.keys[i],
+               (unsigned long long)node.values[i]);
     }
 
     // Recursively print children
@@ -316,8 +318,19 @@ static void print_node_recursive(BTree *tree, uint64_t block_id, int level)
     {
         for (int i = 0; i <= node.num_keys; i++)
         {
-            print_node_recursive(tree, node[i]);
+            print_node_recursive(tree, node.children[i], level + 1);
         }
+    }
+}
+
+// Additional utility function to validate B-tree properties
+static int validate_node(BTree *tree, uint64_t block_id, uint64_t *min_key, uint64_t *max_key)
+{
+    if (block_id == 0)
+    {
+        *min_key = 0;
+        *max_key = 0;
+        return 1;
     }
 }
 
