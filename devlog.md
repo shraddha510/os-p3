@@ -203,3 +203,11 @@ Algorithm: createTree
    - Set count to 0
 
 - Return success
+
+## December 7, 2024 11 PM 
+
+### Thoughts so far
+
+I have gotten a clearer understanding. 
+
+### Plan for this session
