@@ -287,7 +287,7 @@ static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id)
     {
         for (int i = 0; i <= node.num_keys; i++)
         {
-            write_node_recursive(fp, tree);
+            write_node_recursive(fp, tree, node.block_id);
         }
     }
 }
