@@ -159,4 +159,5 @@ I am going to start by creating the header file for the btree.c file
 ### Plan for this session
 
 - Header file
+  - Write up all the expectations detailed in the Project Description
 - Create a btree.c file where I start implementing all the specified functions.
