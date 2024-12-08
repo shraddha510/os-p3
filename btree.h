@@ -48,4 +48,19 @@ typedef struct
     uint64_t children[MAX_CHILDREN]; // Block IDs of child nodes
 } BTreeNode;
 
+/**
+ * B-Tree File Header Structure
+ * ---------------------------
+ * Contains metadata about the B-Tree file:
+ * - Magic number for file verification
+ * - Root node location
+ * - Block allocation tracking
+ */
+typedef struct
+{
+    char magic[8];          // Magic number to identify valid B-Tree files
+    uint64_t root_block_id; // Block ID of the root node
+    uint64_t next_block_id; // Next available block ID for allocation
+} BTreeHeader;
+
 #endif /* BTREE_H */
