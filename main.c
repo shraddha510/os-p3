@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include "btree.h"
 
+static BTree currentTree; // The currently open B-Tree
+
 static void printMenu()
 {
     printf("\nB-Tree Index Manager\n");
@@ -16,6 +18,55 @@ static void printMenu()
     printf("6. print   - Print all pairs\n");
     printf("7. extract - Extract pairs to file\n");
     printf("8. quit    - Exit program\n");
+}
+
+// Function to get yes/no response from user
+static int getYesNo(const char *prompt)
+{
+    char response;
+    printf("%s (y/n): ", prompt);
+    scanf(" %c", &response);
+    clearInputBuffer();
+    return (response == 'y' || response == 'Y');
+}
+
+// Function to handle creating a new B-Tree file
+static void createTree()
+{
+    char filename[256];
+    printf("Enter filename to create: ");
+    if (fgets(filename, sizeof(filename), stdin))
+    {
+        filename[strcspn(filename, "\n")] = 0; // Remove newline
+
+        // Check if file exists
+        FILE *test = fopen(filename, "rb");
+        if (test)
+        {
+            fclose(test);
+            if (!getYesNo("File exists. Overwrite?"))
+            {
+                printf("Operation cancelled.\n");
+                return;
+            }
+        }
+
+        // Close current tree if open
+        if (currentTree.is_open)
+        {
+            close_btree(&currentTree);
+        }
+
+        // Create new tree
+        if (create_btree(&currentTree, filename) == 0)
+        {
+            printf("B-Tree file created successfully.\n");
+        }
+        else
+        {
+            printf("Error creating B-Tree file.\n");
+        }
+    }
 }
 
 int main()
@@ -42,6 +93,10 @@ int main()
             if (strcmp(choice, "menu") == 0 || strcmp(choice, "help") == 0)
             {
                 printMenu();
+            }
+            if (strcmp(choice, "1") == 0 || strcmp(choice, "create") == 0)
+            {
+                // put function here
             }
             else if (strcmp(choice, "8") == 0 || strcmp(choice, "quit") == 0)
             {
