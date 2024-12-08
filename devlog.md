@@ -74,7 +74,7 @@ Required Commands:
 - Look up examples of B-tree implementations for reference
 - Plan out the class structure in more detail
 
-## December 7, 2024 10 AM- Initial Project Setup and Requirements Analysis
+## December 7, 2024 10 AM
 
 ### Thoughts Since Last Session
 After reviewing the previous analysis, I've had more thoughts about the implementation:
@@ -144,8 +144,19 @@ Error Handling:
 - What to do if magic number check fails?
 - How to recover from failed operations?
 
-## December 7, 2024 5 PM- Initial Project Setup and Requirements Analysis
+## December 7, 2024 5 PM
 
 I am going to change from python to C.
 
 I would like to gain a better understanding of all that is happening at a lower level and feel more comfortable with C.
+
+## December 7, 2024 6 PM 
+
+### Thoughts so far
+
+I am going to start by creating the header file for the btree.c file
+
+### Plan for this session
+
+- Header file
+- Create a btree.c file where I start implementing all the specified functions.
