@@ -714,3 +714,23 @@ made sure that there was proper cache clearing on file wwitch
 ### UPDATE
 
 I can now modify multiple files but i am now having an issue where after that if i add more entries it clears the entire thing.
+
+## FINAL UPDATE: December 8, 2024 9 PM
+
+I am working on an issue where when i try to open a second file it doesn't work, or when I enter a few entries in after open a second file - it will not print any of the entries. however if i output it it still works.
+
+errors:
+
+btree.c:333:14: error: call to undeclared function '_insert_internal'
+btree.c:334:35: error: incompatible integer to pointer conversion
+passing 'uint64_t' to parameter of type 'BTreeNode *'
+
+Steps I took to fix the issue:
+
+Modified node insertion logic: the b-tree implementation had two issues: first, it was trying to use a non-existent function _insert_internal when inserting nodes, and second, it was incorrectly passing a block ID number where it needed a pointer to an actual node structure. 
+
+The fix involved using the correct function name insert_nonfull and properly loading node data from disk into a temporary node structure before passing it to the insertion function. 
+
+Finally, i added proper disk flushing after critical operations to ensure data persistence, which fixed the issue where data was being lost between operations.
+
+The program works!!

@@ -74,6 +74,7 @@ static void clear_node_cache(BTree *tree)
         if (node_cache.entries[i].is_dirty)
         {
             write_node(tree, &node_cache.entries[i].node);
+            node_cache.entries[i].is_dirty = 0;
         }
     }
     // Reset cache
@@ -259,7 +260,6 @@ static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t v
 
     if (is_leaf(node))
     {
-        // Move keys greater than new key
         while (i >= 0 && key < node->keys[i])
         {
             node->keys[i + 1] = node->keys[i];
@@ -270,7 +270,14 @@ static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t v
         node->keys[i + 1] = key;
         node->values[i + 1] = value;
         node->num_keys++;
-        write_node(tree, node);
+
+        // Write the modified node back to disk
+        int result = write_node(tree, node);
+        if (result == 0)
+        {
+            fflush(tree->fp);
+        }
+        return result;
     }
     else
     {
@@ -305,13 +312,7 @@ int insert_key(BTree *tree, uint64_t key, uint64_t value)
     if (!tree->is_open)
         return -1;
 
-    // Check for duplicate key
-    if (check_duplicate_key(tree, key) != 0)
-    {
-        return -1;
-    }
-
-    // Handle empty tree
+    int result;
     if (tree->header.root_block_id == 0)
     {
         BTreeNode *root = create_node(tree);
@@ -323,37 +324,30 @@ int insert_key(BTree *tree, uint64_t key, uint64_t value)
         root->num_keys = 1;
         tree->header.root_block_id = root->block_id;
 
-        write_node(tree, root);
-        write_header(tree);
+        result = write_node(tree, root);
+        if (result == 0)
+        {
+            write_header(tree);
+            fflush(tree->fp);
+        }
+
         free(root);
-        return 0;
+        return result;
     }
 
-    // Handle root splitting if needed
+    // Create a temporary node for the root
     BTreeNode root = {0};
-    read_node(tree, tree->header.root_block_id, &root);
+    result = read_node(tree, tree->header.root_block_id, &root);
+    if (result != 0)
+        return result;
 
-    if (root.num_keys == MAX_KEYS)
+    // Now pass the node struct instead of the block_id
+    result = insert_nonfull(tree, &root, key, value);
+    if (result == 0)
     {
-        BTreeNode *new_root = create_node(tree);
-        if (!new_root)
-            return -1;
-
-        new_root->children[0] = tree->header.root_block_id;
-        tree->header.root_block_id = new_root->block_id;
-
-        write_header(tree);
-        split_child(tree, new_root, 0);
-        insert_nonfull(tree, new_root, key, value);
-
-        free(new_root);
+        fflush(tree->fp);
     }
-    else
-    {
-        insert_nonfull(tree, &root, key, value);
-    }
-
-    return 0;
+    return result;
 }
 
 // Search function
@@ -452,13 +446,12 @@ static int read_header(BTree *tree)
 }
 
 // Node I/O operations
-int write_node(BTree *tree, BTreeNode *node)
+static int write_node(BTree *tree, BTreeNode *node)
 {
-    mark_node_dirty(node->block_id);
-
     unsigned char block[BLOCK_SIZE] = {0};
     uint64_t *fields = (uint64_t *)block;
 
+    // Pack the node data
     fields[0] = to_big_endian(node->block_id);
     fields[1] = to_big_endian(node->parent_block_id);
     fields[2] = to_big_endian(node->num_keys);
@@ -474,7 +467,13 @@ int write_node(BTree *tree, BTreeNode *node)
         fields[3 + 2 * MAX_KEYS + i] = to_big_endian(node->children[i]);
     }
 
-    return write_block(tree->fp, node->block_id, block);
+    // Write the block and flush
+    int result = write_block(tree->fp, node->block_id, block);
+    if (result == 0)
+    {
+        fflush(tree->fp);
+    }
+    return result;
 }
 
 int read_node(BTree *tree, uint64_t block_id, BTreeNode *node)
@@ -514,6 +513,12 @@ int read_node(BTree *tree, uint64_t block_id, BTreeNode *node)
 // Tree operations
 int create_btree(BTree *tree, const char *filename)
 {
+    // First close any currently open tree
+    if (tree->is_open)
+    {
+        close_btree(tree);
+    }
+
     FILE *fp = fopen(filename, "wb+");
     if (!fp)
         return -1;
@@ -524,7 +529,7 @@ int create_btree(BTree *tree, const char *filename)
     tree->header.root_block_id = 0;
     tree->header.next_block_id = 1;
 
-    init_node_cache();
+    init_node_cache(); // Reset the cache
 
     if (write_header(tree) != 0)
     {
@@ -533,19 +538,24 @@ int create_btree(BTree *tree, const char *filename)
         return -1;
     }
 
+    fflush(fp); // Force write to disk
     return 0;
 }
 
 int open_btree(BTree *tree, const char *filename)
 {
+    // First close any currently open tree properly
+    if (tree->is_open)
+    {
+        close_btree(tree);
+    }
+
     FILE *fp = fopen(filename, "rb+");
     if (!fp)
         return -1;
 
     tree->fp = fp;
     tree->is_open = 1;
-
-    init_node_cache();
 
     if (read_header(tree) != 0 || memcmp(tree->header.magic, MAGIC_NUMBER, 8) != 0)
     {
@@ -561,7 +571,12 @@ void close_btree(BTree *tree)
 {
     if (tree->is_open)
     {
+        // Write any dirty nodes in cache
         clear_node_cache(tree);
+
+        // Ensure header is written
+        write_header(tree);
+
         if (tree->fp)
         {
             fclose(tree->fp);
