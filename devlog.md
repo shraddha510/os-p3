@@ -697,3 +697,20 @@ void get_cache_stats(int *num_cached, int *num_dirty) {
 The issue right now is almost everything works except when i test it and this issue arises:
 
 when i create two separate files, i can't access the first file.
+
+Steps"
+Add debug statements to verify magic number and header fields during file creation (`create_btree`) and file opening (`open_btree`).
+Test the modified code to identify root causes of file-related issues.
+Record results for further analysis.
+
+#### Reflections:
+Added debug outputs to `btree.c` in relevant locations for header validation. Moving to test changes in the next session.
+
+solution:
+corrected header initialization in create_btree
+made sure the header is read and validated against the expected magic number before considering the file valid.
+made sure that there was proper cache clearing on file wwitch
+
+### UPDATE
+
+I can now modify multiple files but i am now having an issue where after that if i add more entries it clears the entire thing.
