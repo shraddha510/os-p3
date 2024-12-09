@@ -7,6 +7,7 @@
 
 static BTree currentTree; // The currently open B-Tree
 
+// Function to clear input buffer
 static void clearInputBuffer()
 {
     int c;
@@ -14,6 +15,7 @@ static void clearInputBuffer()
         ;
 }
 
+// Function to print menu options
 static void printMenu()
 {
     printf("\nB-Tree Index Manager\n");
@@ -102,8 +104,41 @@ static void openTree()
     }
 }
 
+// Function to handle inserting each key-value pair into the tree
 static void insertPair()
 {
+    if (!currentTree.is_open)
+    {
+        printf("Error: No index file is currently open.\n");
+        return;
+    }
+
+    uint64_t key, value;
+    printf("Enter key (unsigned integer): ");
+    if (scanf("%llu", &key) != 1)
+    {
+        printf("Invalid key format.\n");
+        clearInputBuffer();
+        return;
+    }
+
+    printf("Enter value (unsigned integer): ");
+    if (scanf("%llu", &value) != 1)
+    {
+        printf("Invalid value format.\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
+
+    if (insert_key(&currentTree, key, value) == 0)
+    {
+        printf("Key-value pair inserted successfully.\n");
+    }
+    else
+    {
+        printf("Error: Key already exists or insertion failed.\n");
+    }
 }
 
 // Function to handle searching for a key
@@ -199,6 +234,7 @@ static void extractToFile()
     }
 }
 
+// main function that controls the flow
 int main()
 {
     char choice[10];

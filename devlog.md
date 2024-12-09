@@ -562,3 +562,131 @@ Test Cases:
 STRUGGLING right now to get everything to work.
 
 I will complete btree.c and main.c to get it to work before moving on!!
+
+
+## December 8, 2024 7:30 PM
+
+Things are still not working but I think it is because I have not linked the functions properly between main.c and btree.c
+
+I am going to complete btree.c with finalizing tree statistical information and then try to make sure both files are properly aligned.
+
+--> get_tree_stats
+
+Initialize statistics:
+   Set height = 0
+   Set total_nodes = 0
+   Set total_keys = 0
+
+Validate tree state:
+   IF tree is not open OR root block is 0
+      RETURN (empty tree)
+
+Begin recursive count:
+   Start at root node
+   Initial level = 1
+   Call count_nodes_recursive
+
+--> count_nodes_recursive 
+
+Base case:
+   IF block_id is 0
+      RETURN
+
+Process current node:
+   Read node from disk/cache
+   Increment total_nodes
+   Add node.num_keys to total_keys
+   Update height if current level is deeper
+
+Recursive case (if not leaf):
+   FOR each child (0 to num_keys):
+      Recurse with:
+         - child's block_id
+         - level + 1
+         - same statistics pointers
+
+Maintain statistics:
+   Update counters during traversal
+   Track maximum depth reached
+
+--> get_cache_stats
+
+Get cache count:
+   num_cached = current number of cached nodes
+
+Count dirty nodes:
+   Initialize dirty_count = 0
+   FOR each cached node:
+      IF node is marked dirty
+         Increment dirty_count
+
+Return statistics:
+   Set num_cached pointer
+   Set num_dirty pointer
+
+### Challenges
+
+#### Problem 1:
+- Tree height was reporting incorrectly
+- Sometimes off by one level
+- Inconsistent with actual tree depth
+
+Added debug to print statements
+printf("Current level: %d, Max height: %d\n", level, *height);
+
+Level counting started at 1
+But was subtracting 1 unnecessarily
+Root node was at level 1, not 0
+
+// Fixed height tracking
+if (level > *height)
+    *height = level;  // Keep actual level
+
+#### Problem 2:
+- Random crashes during traversal
+- Statistics occasionally wrong
+- Memory corruption errors
+
+// Added parameter validation
+static void count_nodes_recursive(...) {
+    if (!tree || !height || !total_nodes || !total_keys) {
+        return;  // Prevent null pointer crashes
+    }}
+
+Root Cause:
+
+Not zeroing node structure before reading
+Garbage values causing issues
+Memory leaks in recursion
+
+Solution-
+BTreeNode node = {0};  // Zero initialization
+read_node(tree, block_id, &node);
+
+#### Problem 3:
+- Cache count didn't match reality
+- Dirty nodes not properly tracked
+- Cache eviction issues
+
+Added cache state logging-
+void print_cache_state() {
+    printf("Cache entries: %d\n", node_cache.count);
+    for (int i = 0; i < node_cache.count; i++) {
+        printf("[%d] block=%llu, dirty=%d\n", 
+               i, node_cache.entries[i].block_id,
+               node_cache.entries[i].is_dirty);
+    }
+}
+
+Solution:
+void get_cache_stats(int *num_cached, int *num_dirty) {
+    *num_cached = node_cache.count;
+    *num_dirty = 0;
+    
+    // Clear tracking
+    for (int i = 0; i < node_cache.count; i++) {
+        if (node_cache.entries[i].is_dirty) {
+            (*num_dirty)++;
+        }
+    }
+}

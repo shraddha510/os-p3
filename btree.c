@@ -4,16 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int write_block(FILE *fp, uint64_t block_id, const void *buf);
-static int read_block(FILE *fp, uint64_t block_id, void *buf);
-static int write_header(BTree *tree);
-static int read_header(BTree *tree);
-static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t value);
-static int split_child(BTree *tree, BTreeNode *parent, int child_index);
-static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id);
-static void print_node_recursive(BTree *tree, uint64_t block_id, int level);
-static int is_leaf(BTreeNode *node);
-
 #define MAX_CACHED_NODES 3
 
 typedef struct CacheNode
@@ -30,6 +20,40 @@ typedef struct NodeCache
 } NodeCache;
 
 static NodeCache node_cache = {{0}, 0};
+
+// Forward declarations for internal functions
+static int is_leaf(BTreeNode *node);
+static int write_block(FILE *fp, uint64_t block_id, const void *buf);
+static int read_block(FILE *fp, uint64_t block_id, void *buf);
+static int write_header(BTree *tree);
+static int read_header(BTree *tree);
+static int write_node(BTree *tree, BTreeNode *node);
+static int read_node(BTree *tree, uint64_t block_id, BTreeNode *node);
+static BTreeNode *create_node(BTree *tree);
+static int split_child(BTree *tree, BTreeNode *parent, int child_index);
+static int insert_nonfull(BTree *tree, BTreeNode *node, uint64_t key, uint64_t value);
+static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id);
+static void print_node_recursive(BTree *tree, uint64_t block_id, int level);
+static void count_nodes_recursive(uint64_t block_id, int level, int *height, int *total_nodes, int *total_keys, BTree *tree);
+
+// Endianness conversion functions
+static uint64_t to_big_endian(uint64_t value)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return __builtin_bswap64(value);
+#else
+    return value;
+#endif
+}
+
+static uint64_t from_big_endian(uint64_t value)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return __builtin_bswap64(value);
+#else
+    return value;
+#endif
+}
 
 // Cache management functions
 static void init_node_cache()
@@ -117,80 +141,42 @@ static BTreeNode *cache_node(BTree *tree, uint64_t block_id)
     return &node_cache.entries[idx].node;
 }
 
-// Endianness conversion functions
-static uint64_t to_big_endian(uint64_t value)
+static int check_duplicate_key(BTree *tree, uint64_t key)
 {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return __builtin_bswap64(value);
-#else
-    return value;
-#endif
-}
-
-static uint64_t from_big_endian(uint64_t value)
-{
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    return __builtin_bswap64(value);
-#else
-    return value;
-#endif
-}
-
-// Block I/O operations
-static int write_block(FILE *fp, uint64_t block_id, const void *buf)
-{
-    if (fseek(fp, block_id * BLOCK_SIZE, SEEK_SET) != 0)
+    if (tree->header.root_block_id == 0)
     {
-        return -1;
-    }
-    if (fwrite(buf, 1, BLOCK_SIZE, fp) != BLOCK_SIZE)
-    {
-        return -1;
-    }
-    fflush(fp);
-    return 0;
-}
-
-static int read_block(FILE *fp, uint64_t block_id, void *buf)
-{
-    if (fseek(fp, block_id * BLOCK_SIZE, SEEK_SET) != 0)
-    {
-        return -1;
-    }
-    if (fread(buf, 1, BLOCK_SIZE, fp) != BLOCK_SIZE)
-    {
-        return -1;
-    }
-    return 0;
-}
-
-// Header I/O operations
-static int write_header(BTree *tree)
-{
-    unsigned char block[BLOCK_SIZE] = {0};
-    memcpy(block, tree->header.magic, 8);
-
-    uint64_t *fields = (uint64_t *)(block + 8);
-    fields[0] = to_big_endian(tree->header.root_block_id);
-    fields[1] = to_big_endian(tree->header.next_block_id);
-
-    return write_block(tree->fp, 0, block);
-}
-
-static int read_header(BTree *tree)
-{
-    unsigned char block[BLOCK_SIZE];
-    if (read_block(tree->fp, 0, block) != 0)
-    {
-        return -1;
+        return 0; // Empty tree, no duplicates
     }
 
-    memcpy(tree->header.magic, block, 8);
-    uint64_t *fields = (uint64_t *)(block + 8);
-    tree->header.root_block_id = from_big_endian(fields[0]);
-    tree->header.next_block_id = from_big_endian(fields[1]);
+    BTreeNode *node;
+    uint64_t current_block = tree->header.root_block_id;
 
-    return 0;
+    while (current_block != 0)
+    {
+        node = cache_node(tree, current_block);
+        if (!node)
+            return -1; // Error reading node
+
+        // Search for key in current node
+        for (int i = 0; i < node->num_keys; i++)
+        {
+            if (key == node->keys[i])
+            {
+                return -1; // Duplicate found
+            }
+            if (key < node->keys[i])
+            {
+                current_block = node->children[i];
+                goto next_iteration;
+            }
+        }
+        current_block = node->children[node->num_keys];
+
+    next_iteration:
+        continue;
+    }
+
+    return 0; // No duplicate found
 }
 
 // Helper function to check if node is a leaf
@@ -370,6 +356,286 @@ int insert_key(BTree *tree, uint64_t key, uint64_t value)
     return 0;
 }
 
+// Search function
+int search_key(BTree *tree, uint64_t key, uint64_t *value)
+{
+    if (!tree->is_open || tree->header.root_block_id == 0)
+    {
+        return -1;
+    }
+
+    BTreeNode node = {0};
+    uint64_t current_block = tree->header.root_block_id;
+
+    while (current_block != 0)
+    {
+        read_node(tree, current_block, &node);
+
+        for (int i = 0; i < node.num_keys; i++)
+        {
+            if (key == node.keys[i])
+            {
+                *value = node.values[i];
+                return 0;
+            }
+            if (key < node.keys[i])
+            {
+                current_block = node.children[i];
+                goto next_iteration;
+            }
+        }
+
+        current_block = node.children[node.num_keys];
+
+    next_iteration:
+        continue;
+    }
+
+    return -1; // Key not found
+}
+
+// Block I/O operations
+static int write_block(FILE *fp, uint64_t block_id, const void *buf)
+{
+    if (fseek(fp, block_id * BLOCK_SIZE, SEEK_SET) != 0)
+    {
+        return -1;
+    }
+    if (fwrite(buf, 1, BLOCK_SIZE, fp) != BLOCK_SIZE)
+    {
+        return -1;
+    }
+    fflush(fp);
+    return 0;
+}
+
+static int read_block(FILE *fp, uint64_t block_id, void *buf)
+{
+    if (fseek(fp, block_id * BLOCK_SIZE, SEEK_SET) != 0)
+    {
+        return -1;
+    }
+    if (fread(buf, 1, BLOCK_SIZE, fp) != BLOCK_SIZE)
+    {
+        return -1;
+    }
+    return 0;
+}
+
+// Header I/O operations
+static int write_header(BTree *tree)
+{
+    unsigned char block[BLOCK_SIZE] = {0};
+    memcpy(block, tree->header.magic, 8);
+
+    uint64_t *fields = (uint64_t *)(block + 8);
+    fields[0] = to_big_endian(tree->header.root_block_id);
+    fields[1] = to_big_endian(tree->header.next_block_id);
+
+    return write_block(tree->fp, 0, block);
+}
+
+static int read_header(BTree *tree)
+{
+    unsigned char block[BLOCK_SIZE];
+    if (read_block(tree->fp, 0, block) != 0)
+    {
+        return -1;
+    }
+
+    memcpy(tree->header.magic, block, 8);
+    uint64_t *fields = (uint64_t *)(block + 8);
+    tree->header.root_block_id = from_big_endian(fields[0]);
+    tree->header.next_block_id = from_big_endian(fields[1]);
+
+    return 0;
+}
+
+// Node I/O operations
+int write_node(BTree *tree, BTreeNode *node)
+{
+    mark_node_dirty(node->block_id);
+
+    unsigned char block[BLOCK_SIZE] = {0};
+    uint64_t *fields = (uint64_t *)block;
+
+    fields[0] = to_big_endian(node->block_id);
+    fields[1] = to_big_endian(node->parent_block_id);
+    fields[2] = to_big_endian(node->num_keys);
+
+    for (int i = 0; i < MAX_KEYS; i++)
+    {
+        fields[3 + i] = to_big_endian(node->keys[i]);
+        fields[3 + MAX_KEYS + i] = to_big_endian(node->values[i]);
+    }
+
+    for (int i = 0; i < MAX_CHILDREN; i++)
+    {
+        fields[3 + 2 * MAX_KEYS + i] = to_big_endian(node->children[i]);
+    }
+
+    return write_block(tree->fp, node->block_id, block);
+}
+
+int read_node(BTree *tree, uint64_t block_id, BTreeNode *node)
+{
+    BTreeNode *cached = get_cached_node(block_id);
+    if (cached)
+    {
+        *node = *cached;
+        return 0;
+    }
+
+    unsigned char block[BLOCK_SIZE];
+    if (read_block(tree->fp, block_id, block) != 0)
+    {
+        return -1;
+    }
+
+    uint64_t *fields = (uint64_t *)block;
+    node->block_id = from_big_endian(fields[0]);
+    node->parent_block_id = from_big_endian(fields[1]);
+    node->num_keys = from_big_endian(fields[2]);
+
+    for (int i = 0; i < MAX_KEYS; i++)
+    {
+        node->keys[i] = from_big_endian(fields[3 + i]);
+        node->values[i] = from_big_endian(fields[3 + MAX_KEYS + i]);
+    }
+
+    for (int i = 0; i < MAX_CHILDREN; i++)
+    {
+        node->children[i] = from_big_endian(fields[3 + 2 * MAX_KEYS + i]);
+    }
+
+    return 0;
+}
+
+// Tree operations
+int create_btree(BTree *tree, const char *filename)
+{
+    FILE *fp = fopen(filename, "wb+");
+    if (!fp)
+        return -1;
+
+    tree->fp = fp;
+    tree->is_open = 1;
+    memcpy(tree->header.magic, MAGIC_NUMBER, 8);
+    tree->header.root_block_id = 0;
+    tree->header.next_block_id = 1;
+
+    init_node_cache();
+
+    if (write_header(tree) != 0)
+    {
+        fclose(fp);
+        tree->is_open = 0;
+        return -1;
+    }
+
+    return 0;
+}
+
+int open_btree(BTree *tree, const char *filename)
+{
+    FILE *fp = fopen(filename, "rb+");
+    if (!fp)
+        return -1;
+
+    tree->fp = fp;
+    tree->is_open = 1;
+
+    init_node_cache();
+
+    if (read_header(tree) != 0 || memcmp(tree->header.magic, MAGIC_NUMBER, 8) != 0)
+    {
+        fclose(fp);
+        tree->is_open = 0;
+        return -1;
+    }
+
+    return 0;
+}
+
+void close_btree(BTree *tree)
+{
+    if (tree->is_open)
+    {
+        clear_node_cache(tree);
+        if (tree->fp)
+        {
+            fclose(tree->fp);
+            tree->fp = NULL;
+        }
+    }
+    tree->is_open = 0;
+}
+
+// Print function
+void print_tree(BTree *tree)
+{
+    if (!tree->is_open || tree->header.root_block_id == 0)
+    {
+        printf("Tree is empty.\n");
+        return;
+    }
+
+    printf("B-Tree Contents:\n");
+    printf("---------------\n");
+    print_node_recursive(tree, tree->header.root_block_id, 0);
+}
+
+// Data load/extract functions
+int load_data(BTree *tree, const char *filename)
+{
+    if (!tree->is_open)
+        return -1;
+
+    FILE *fp = fopen(filename, "r");
+    if (!fp)
+        return -1;
+
+    char line[256];
+    int line_num = 0;
+    while (fgets(line, sizeof(line), fp))
+    {
+        line_num++;
+        uint64_t key, value;
+
+        if (sscanf(line, "%llu,%llu",
+                   (unsigned long long *)&key,
+                   (unsigned long long *)&value) != 2)
+        {
+            printf("Warning: Invalid format at line %d\n", line_num);
+            continue;
+        }
+
+        if (insert_key(tree, key, value) != 0)
+        {
+            printf("Warning: Failed to insert key %llu at line %d\n",
+                   (unsigned long long)key, line_num);
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+int extract_data(BTree *tree, const char *filename)
+{
+    if (!tree->is_open || tree->header.root_block_id == 0)
+        return -1;
+
+    FILE *fp = fopen(filename, "w");
+    if (!fp)
+        return -1;
+
+    write_node_recursive(fp, tree, tree->header.root_block_id);
+
+    fclose(fp);
+    return 0;
+}
+
 static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id)
 {
     if (block_id == 0)
@@ -424,111 +690,6 @@ static void print_node_recursive(BTree *tree, uint64_t block_id, int level)
             print_node_recursive(tree, node.children[i], level + 1);
         }
     }
-}
-
-// Additional utility function to validate B-tree properties
-static int validate_node(BTree *tree, uint64_t block_id, uint64_t *min_key, uint64_t *max_key)
-{
-    if (block_id == 0)
-    {
-        *min_key = 0;
-        *max_key = 0;
-        return 1;
-    }
-}
-
-int create_btree(BTree *tree, const char *filename)
-{
-    FILE *fp = fopen(filename, "wb+");
-    if (!fp)
-        return -1;
-
-    tree->fp = fp;
-    tree->is_open = 1;
-    memcpy(tree->header.magic, MAGIC_NUMBER, 8);
-    tree->header.root_block_id = 0;
-    tree->header.next_block_id = 1;
-
-    if (write_header(tree) != 0)
-    {
-        fclose(fp);
-        tree->is_open = 0;
-        return -1;
-    }
-    return 0;
-}
-
-int open_btree(BTree *tree, const char *filename)
-{
-    FILE *fp = fopen(filename, "rb+");
-    if (!fp)
-        return -1;
-
-    tree->fp = fp;
-    tree->is_open = 1;
-
-    return 0;
-}
-
-void close_btree(BTree *tree)
-{
-    if (tree->fp)
-    {
-        fclose(tree->fp);
-        tree->fp = NULL;
-    }
-    tree->is_open = 0;
-}
-
-// Data load/extract functions
-int load_data(BTree *tree, const char *filename)
-{
-    if (!tree->is_open)
-        return -1;
-
-    FILE *fp = fopen(filename, "r");
-    if (!fp)
-        return -1;
-
-    char line[256];
-    int line_num = 0;
-    while (fgets(line, sizeof(line), fp))
-    {
-        uint64_t key, value;
-        line_num++;
-
-        if (sscanf(line, "%llu,%llu",
-                   (unsigned long long *)&key,
-                   (unsigned long long *)&value) != 2)
-        {
-            printf("Warning: Invalid format at line %d\n", line_num);
-            continue;
-        }
-
-        if (insert_key(tree, key, value) != 0)
-        {
-            printf("Warning: Failed to insert key %llu at line %d\n",
-                   (unsigned long long)key, line_num);
-        }
-    }
-
-    fclose(fp);
-    return 0;
-}
-
-int extract_data(BTree *tree, const char *filename)
-{
-    if (!tree->is_open || tree->header.root_block_id == 0)
-        return -1;
-
-    FILE *fp = fopen(filename, "w");
-    if (!fp)
-        return -1;
-
-    write_node_recursive(fp, tree, tree->header.root_block_id);
-
-    fclose(fp);
-    return 0;
 }
 
 // Additional utility function to validate B-tree properties
@@ -616,28 +777,55 @@ int validate_btree(BTree *tree)
     return validate_node(tree, tree->header.root_block_id, &min_key, &max_key);
 }
 
-// Public function to validate entire B-tree
-int validate_btree(BTree *tree)
+// Additional helper function to get tree statistics
+void get_tree_stats(BTree *tree, int *height, int *total_nodes, int *total_keys)
 {
-    if (!tree->is_open)
-        return -1;
-    if (tree->header.root_block_id == 0)
-        return 1; // Empty tree is valid
+    *height = 0;
+    *total_nodes = 0;
+    *total_keys = 0;
 
-    uint64_t min_key, max_key;
-    return validate_node(tree, tree->header.root_block_id, &min_key, &max_key);
-}
-
-// Print function
-void print_tree(BTree *tree)
-{
     if (!tree->is_open || tree->header.root_block_id == 0)
     {
-        printf("Tree is empty.\n");
         return;
     }
 
-    printf("B-Tree Contents:\n");
-    printf("---------------\n");
-    print_node_recursive(tree, tree->header.root_block_id, 0);
+    count_nodes_recursive(tree->header.root_block_id, 1, height, total_nodes, total_keys, tree);
+}
+
+// Function to get cache statistics
+void get_cache_stats(int *num_cached, int *num_dirty)
+{
+    *num_cached = node_cache.count;
+    *num_dirty = 0;
+
+    for (int i = 0; i < node_cache.count; i++)
+    {
+        if (node_cache.entries[i].is_dirty)
+        {
+            (*num_dirty)++;
+        }
+    }
+}
+
+static void count_nodes_recursive(uint64_t block_id, int level, int *height,
+                                  int *total_nodes, int *total_keys, BTree *tree)
+{
+    if (block_id == 0)
+        return;
+
+    BTreeNode node = {0};
+    read_node(tree, block_id, &node);
+
+    (*total_nodes)++;
+    (*total_keys) += node.num_keys;
+    if (level > *height)
+        *height = level;
+
+    if (!is_leaf(&node))
+    {
+        for (int i = 0; i <= node.num_keys; i++)
+        {
+            count_nodes_recursive(node.children[i], level + 1, height, total_nodes, total_keys, tree);
+        }
+    }
 }
