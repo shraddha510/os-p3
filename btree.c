@@ -14,6 +14,109 @@ static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id);
 static void print_node_recursive(BTree *tree, uint64_t block_id, int level);
 static int is_leaf(BTreeNode *node);
 
+#define MAX_CACHED_NODES 3
+
+typedef struct CacheNode
+{
+    uint64_t block_id;
+    BTreeNode node;
+    int is_dirty; // 1 if node needs to be written back to disk
+} CacheNode;
+
+typedef struct NodeCache
+{
+    CacheNode entries[MAX_CACHED_NODES];
+    int count;
+} NodeCache;
+
+static NodeCache node_cache = {{0}, 0};
+
+// Cache management functions
+static void init_node_cache()
+{
+    node_cache.count = 0;
+    for (int i = 0; i < MAX_CACHED_NODES; i++)
+    {
+        node_cache.entries[i].block_id = 0;
+        node_cache.entries[i].is_dirty = 0;
+    }
+}
+
+static void clear_node_cache(BTree *tree)
+{
+    // Write any dirty nodes back to disk
+    for (int i = 0; i < node_cache.count; i++)
+    {
+        if (node_cache.entries[i].is_dirty)
+        {
+            write_node(tree, &node_cache.entries[i].node);
+        }
+    }
+    // Reset cache
+    init_node_cache();
+}
+
+static BTreeNode *get_cached_node(uint64_t block_id)
+{
+    for (int i = 0; i < node_cache.count; i++)
+    {
+        if (node_cache.entries[i].block_id == block_id)
+        {
+            return &node_cache.entries[i].node;
+        }
+    }
+    return NULL;
+}
+
+static void mark_node_dirty(uint64_t block_id)
+{
+    for (int i = 0; i < node_cache.count; i++)
+    {
+        if (node_cache.entries[i].block_id == block_id)
+        {
+            node_cache.entries[i].is_dirty = 1;
+            break;
+        }
+    }
+}
+
+static BTreeNode *cache_node(BTree *tree, uint64_t block_id)
+{
+    // First check if node is already cached
+    BTreeNode *cached = get_cached_node(block_id);
+    if (cached)
+        return cached;
+
+    // If cache is full, write out the oldest entry
+    if (node_cache.count == MAX_CACHED_NODES)
+    {
+        if (node_cache.entries[0].is_dirty)
+        {
+            write_node(tree, &node_cache.entries[0].node);
+        }
+        // Shift remaining entries
+        for (int i = 1; i < MAX_CACHED_NODES; i++)
+        {
+            node_cache.entries[i - 1] = node_cache.entries[i];
+        }
+        node_cache.count--;
+    }
+
+    // Add new node to cache
+    int idx = node_cache.count++;
+    node_cache.entries[idx].block_id = block_id;
+    node_cache.entries[idx].is_dirty = 0;
+
+    // Read node from disk
+    if (read_node(tree, block_id, &node_cache.entries[idx].node) != 0)
+    {
+        node_cache.count--;
+        return NULL;
+    }
+
+    return &node_cache.entries[idx].node;
+}
+
 // Endianness conversion functions
 static uint64_t to_big_endian(uint64_t value)
 {
