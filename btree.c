@@ -378,6 +378,13 @@ static void write_node_recursive(FILE *fp, BTree *tree, uint64_t block_id)
     BTreeNode node = {0};
     read_node(tree, block_id, &node);
 
+    // Write current node's key-value pairs
+    for (int i = 0; i < node.num_keys; i++)
+    {
+        fprintf(fp, "%llu,%llu\n",
+                (unsigned long long)node.keys[i],
+                (unsigned long long)node.values[i]);
+    }
 
     // Recursively process children if not a leaf
     if (!is_leaf(&node))
