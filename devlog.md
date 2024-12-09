@@ -690,3 +690,10 @@ void get_cache_stats(int *num_cached, int *num_dirty) {
         }
     }
 }
+
+## December 8, 2024 8:45 PM
+
+### Issue
+The issue right now is almost everything works except when i test it and this issue arises:
+
+when i create two separate files, i can't access the first file.
