@@ -495,7 +495,21 @@ Property Checks:
 
 So far I have been able to fix the errors at hand dealing with creating a node and printing. The split node function caused some issues but the code is working up until now.
 
-### Working on
+### Working on:
+
+Caching nodes
+B-Tree operations
+   -Create new node
+   -Move half of keys
+   -Update parent
+   -Handle children
+   -Write all changes
+   
+### Debugging:
+Found issue with pointer updates
+Fixed key distribution
+Added validation checks
+
 
 ### Challenges:
 

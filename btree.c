@@ -480,6 +480,68 @@ void close_btree(BTree *tree)
     tree->is_open = 0;
 }
 
+// Data load/extract functions
+int load_data(BTree *tree, const char *filename)
+{
+    if (!tree->is_open)
+        return -1;
+
+    FILE *fp = fopen(filename, "r");
+    if (!fp)
+        return -1;
+
+    char line[256];
+    int line_num = 0;
+    while (fgets(line, sizeof(line), fp))
+    {
+        uint64_t key, value;
+
+        if (sscanf(line, "%lu,%lu",
+                   (unsigned long *)&key,
+                   (unsigned long *)&value) != 2)
+        {
+            printf("Warning: Invalid format at line %d\n", line_num);
+            continue;
+        }
+
+        if (insert_key(tree, key, value) != 0)
+        {
+            printf("Warning: Failed to insert key %llu at line %d\n",
+                   (unsigned long)key, line_num);
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+int extract_data(BTree *tree, const char *filename)
+{
+    if (!tree->is_open || tree->header.root_block_id == 0)
+        return -1;
+
+    FILE *fp = fopen(filename, "w");
+    if (!fp)
+        return -1;
+
+    write_node_recursive(fp, tree, tree->header.block_id);
+
+    fclose(fp);
+    return 0;
+}
+
+// Public function to validate entire B-tree
+int validate_btree(BTree *tree)
+{
+    if (!tree->is_open)
+        return -1;
+    if (tree->header.root_block_id == 0)
+        return 1; // Empty tree is valid
+
+    uint64_t min_key, max_key;
+    return validate_node(tree, tree->header.root_block_id, &min_key, &max_key);
+}
+
 // Print function
 void print_tree(BTree *tree)
 {
