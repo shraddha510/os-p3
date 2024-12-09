@@ -531,6 +531,52 @@ int extract_data(BTree *tree, const char *filename)
     return 0;
 }
 
+// Additional utility function to validate B-tree properties
+static int validate_node(BTree *tree, uint64_t block_id, uint64_t *min_key, uint64_t *max_key)
+{
+    if (block_id == 0)
+    {
+        *min_key = 0;
+        *max_key = 0;
+        return 1;
+    }
+
+    BTreeNode node = {0};
+    read_node(tree, block_id, &node);
+
+    // Check number of keys
+    if (node.num_keys < 0 || node.num_keys > MAX_KEYS)
+    {
+        return 0;
+    }
+
+    // Check key ordering
+    for (int i = 1; i < node.num_keys; i++)
+    {
+        if (node.keys[i] <= node.keys[i - 1])
+        {
+            return 0;
+        }
+    }
+
+    *min_key = node.keys[0];
+    *max_key = node.keys[node.num_keys - 1];
+
+    
+}
+
+// Public function to validate entire B-tree
+int validate_btree(BTree *tree)
+{
+    if (!tree->is_open)
+        return -1;
+    if (tree->header.root_block_id == 0)
+        return 1; // Empty tree is valid
+
+    uint64_t min_key, max_key;
+    return validate_node(tree, tree->header.root_block_id, &min_key, &max_key);
+}
+
 // Public function to validate entire B-tree
 int validate_btree(BTree *tree)
 {

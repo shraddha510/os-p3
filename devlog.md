@@ -504,7 +504,7 @@ B-Tree operations
    -Update parent
    -Handle children
    -Write all changes
-   
+
 ### Debugging:
 Found issue with pointer updates
 Fixed key distribution
@@ -524,3 +524,38 @@ Added validation checks
    -Ensuring no memory leaks
    -Proper cleanup on close
    -Handling allocation failures
+
+
+## December 8, 2024 7 PM
+
+###Thoughts so far:
+
+### What im working on:
+
+Working on:
+-Implementing the tree and node validation
+   1. All leaves must be at same level
+   2. Nodes must have keys in ascending order
+   3. Children between keys k1 and k2 must have all keys in range (k1,k2)
+   4. Non-leaf nodes with n keys must have n+1 children
+   5. Node must not exceed MAX_KEYS
+
+Started with helper function to validate individual nodes.
+
+### Challenges Faced:
+
+Range Validation:
+
+   - Had to carefully track valid ranges for each subtree
+   - Edge cases with minimum and maximum values
+   - Properly handling leaf nodes vs internal nodes
+
+Test Cases:
+   - Empty tree
+   - Single node
+   - Multiple levels
+   - Invalid structures:
+      - Out of order keys
+      - Invalid children
+      - Wrong key ranges
+
