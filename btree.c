@@ -562,6 +562,7 @@ static int validate_node(BTree *tree, uint64_t block_id, uint64_t *min_key, uint
     *min_key = node.keys[0];
     *max_key = node.keys[node.num_keys - 1];
 
+
 }
 
 // Public function to validate entire B-tree
