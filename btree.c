@@ -495,10 +495,11 @@ int load_data(BTree *tree, const char *filename)
     while (fgets(line, sizeof(line), fp))
     {
         uint64_t key, value;
+        line_num++;
 
-        if (sscanf(line, "%lu,%lu",
-                   (unsigned long *)&key,
-                   (unsigned long *)&value) != 2)
+        if (sscanf(line, "%llu,%llu",
+                   (unsigned long long *)&key,
+                   (unsigned long long *)&value) != 2)
         {
             printf("Warning: Invalid format at line %d\n", line_num);
             continue;
@@ -507,7 +508,7 @@ int load_data(BTree *tree, const char *filename)
         if (insert_key(tree, key, value) != 0)
         {
             printf("Warning: Failed to insert key %llu at line %d\n",
-                   (unsigned long)key, line_num);
+                   (unsigned long long)key, line_num);
         }
     }
 
@@ -524,7 +525,7 @@ int extract_data(BTree *tree, const char *filename)
     if (!fp)
         return -1;
 
-    write_node_recursive(fp, tree, tree->header.block_id);
+    write_node_recursive(fp, tree, tree->header.root_block_id);
 
     fclose(fp);
     return 0;
