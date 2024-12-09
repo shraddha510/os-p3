@@ -510,7 +510,6 @@ Found issue with pointer updates
 Fixed key distribution
 Added validation checks
 
-
 ### Challenges:
 
 -Cache replacement strategy
@@ -524,7 +523,6 @@ Added validation checks
    -Ensuring no memory leaks
    -Proper cleanup on close
    -Handling allocation failures
-
 
 ## December 8, 2024 7 PM
 

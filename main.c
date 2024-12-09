@@ -102,8 +102,12 @@ static void openTree()
     }
 }
 
-// Function to handle inserting a key-value pair
 static void insertPair()
+{
+}
+
+// Function to handle searching for a key
+static void searchForKey()
 {
     if (!currentTree.is_open)
     {
@@ -111,7 +115,25 @@ static void insertPair()
         return;
     }
 
+    uint64_t key, value;
+    printf("Enter key to search: ");
+    if (scanf("%llu", &key) != 1)
+    {
+        printf("Invalid key format.\n");
+        clearInputBuffer();
+        return;
+    }
+    clearInputBuffer();
 
+    if (search_key(&currentTree, key, &value) == 0)
+    {
+        printf("Found: Key = %llu, Value = %llu\n",
+               (unsigned long long)key, (unsigned long long)value);
+    }
+    else
+    {
+        printf("Key not found.\n");
+    }
 }
 
 // Function to handle loading data from a file
@@ -124,7 +146,19 @@ static void loadFromFile()
     }
 
     char filename[256];
+    printf("Enter filename to load from: ");
+    if (fgets(filename, sizeof(filename), stdin))
+    {
+        filename[strcspn(filename, "\n")] = 0;
 
+        if (load_data(&currentTree, filename) == 0)
+        {
+            printf("Data loaded successfully.\n");
+        }
+        else
+        {
+            printf("Error loading data from file.\n");
+        }
     }
 }
 
@@ -137,7 +171,32 @@ static void extractToFile()
         return;
     }
 
+    char filename[256];
+    printf("Enter filename to extract to: ");
+    if (fgets(filename, sizeof(filename), stdin))
+    {
+        filename[strcspn(filename, "\n")] = 0;
 
+        FILE *test = fopen(filename, "r");
+        if (test)
+        {
+            fclose(test);
+            if (!getYesNo("File exists. Overwrite?"))
+            {
+                printf("Operation cancelled.\n");
+                return;
+            }
+        }
+
+        if (extract_data(&currentTree, filename) == 0)
+        {
+            printf("Data extracted successfully.\n");
+        }
+        else
+        {
+            printf("Error extracting data to file.\n");
+        }
+    }
 }
 
 int main()

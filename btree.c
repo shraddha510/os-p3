@@ -562,7 +562,46 @@ static int validate_node(BTree *tree, uint64_t block_id, uint64_t *min_key, uint
     *min_key = node.keys[0];
     *max_key = node.keys[node.num_keys - 1];
 
+    // Recursively validate children
+    if (!is_leaf(&node))
+    {
+        uint64_t child_min, child_max;
 
+        // Validate leftmost child
+        if (!validate_node(tree, node.children[0], &child_min, &child_max))
+        {
+            return 0;
+        }
+        if (child_max >= node.keys[0])
+        {
+            return 0;
+        }
+
+        // Validate middle children
+        for (int i = 1; i < node.num_keys; i++)
+        {
+            if (!validate_node(tree, node.children[i], &child_min, &child_max))
+            {
+                return 0;
+            }
+            if (child_min <= node.keys[i - 1] || child_max >= node.keys[i])
+            {
+                return 0;
+            }
+        }
+
+        // Validate rightmost child
+        if (!validate_node(tree, node.children[node.num_keys], &child_min, &child_max))
+        {
+            return 0;
+        }
+        if (child_min <= node.keys[node.num_keys - 1])
+        {
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 // Public function to validate entire B-tree
