@@ -139,6 +139,69 @@ static void insertPair()
     }
 }
 
+// Function to handle loading data from a file
+static void loadFromFile()
+{
+    if (!currentTree.is_open)
+    {
+        printf("Error: No index file is currently open.\n");
+        return;
+    }
+
+    char filename[256];
+    printf("Enter filename to load from: ");
+    if (fgets(filename, sizeof(filename), stdin))
+    {
+        filename[strcspn(filename, "\n")] = 0;
+
+        if (load_data(&currentTree, filename) == 0)
+        {
+            printf("Data loaded successfully.\n");
+        }
+        else
+        {
+            printf("Error loading data from file.\n");
+        }
+    }
+}
+
+// Function to handle extracting data to a file
+static void extractToFile()
+{
+    if (!currentTree.is_open)
+    {
+        printf("Error: No index file is currently open.\n");
+        return;
+    }
+
+    char filename[256];
+    printf("Enter filename to extract to: ");
+    if (fgets(filename, sizeof(filename), stdin))
+    {
+        filename[strcspn(filename, "\n")] = 0;
+
+        FILE *test = fopen(filename, "r");
+        if (test)
+        {
+            fclose(test);
+            if (!getYesNo("File exists. Overwrite?"))
+            {
+                printf("Operation cancelled.\n");
+                return;
+            }
+        }
+
+        if (extract_data(&currentTree, filename) == 0)
+        {
+            printf("Data extracted successfully.\n");
+        }
+        else
+        {
+            printf("Error extracting data to file.\n");
+        }
+    }
+}
+
 int main()
 {
     char choice[10];

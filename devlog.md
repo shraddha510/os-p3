@@ -542,6 +542,8 @@ Working on:
 
 Started with helper function to validate individual nodes.
 
+Updating main.c to catch up with all changes in btree.c
+
 ### Challenges Faced:
 
 Range Validation:
@@ -559,3 +561,6 @@ Test Cases:
       - Invalid children
       - Wrong key ranges
 
+STRUGGLING right now to get everything to work.
+
+I will complete btree.c and main.c to get it to work before moving on!!
